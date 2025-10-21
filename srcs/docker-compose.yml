@@ -16,6 +16,9 @@ services:
     container_name: mariadb
     env_file:
       - .env
+    secrets:
+      - db_root_password
+      - db_password
     volumes:
       - mariadb_data:/var/lib/mysql
     restart: always
@@ -26,6 +29,9 @@ services:
       - mariadb
     env_file:
       - .env
+    secrets:
+      - db_password
+      - credentials
     volumes:
       - wordpress_data:/var/www/html
     restart: always
@@ -43,3 +49,11 @@ volumes:
       type: 'none'
       o: bind
       device: /home/casper/data/wordpress_data
+
+secrets:
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  db_password:
+    file: ../secrets/db_password.txt
+  credentials:
+    file: ../secrets/credentials.txt
