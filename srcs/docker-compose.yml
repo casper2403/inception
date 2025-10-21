@@ -32,4 +32,14 @@ services:
 
 volumes:
   mariadb_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: bind
+      device: /home/casper/data/mariadb_data
   wordpress_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: bind
+      device: /home/casper/data/wordpress_data
