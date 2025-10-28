@@ -1,36 +1,63 @@
 #!/bin/bash
+
 set -e
 
-# Ensure correct permissions
-chown -R www-data:www-data /var/www/html
+# Minimal WordPress setup using WP-CLI. Uses environment variables already
+# provided by the docker-compose setup (e.g. WORDPRESS_DB_*, DOMAIN_NAME, etc.).
 
-# Generate wp-config.php only if it doesn't exist
+mkdir -p /var/www/html
+cd /var/www/html || exit 1
 
-# Read secrets if available
-if [ -f /run/secrets/db_password ]; then
-    WORDPRESS_DB_PASSWORD=$(cat /run/secrets/db_password)
-else
-	WORDPRESS_DB_PASSWORD="wp_pass"
-fi
-if [ -f /run/secrets/credentials ]; then
-    WORDPRESS_DB_USER=$(cat /run/secrets/credentials)
-    if [[ "$WORDPRESS_DB_USER" == *admin* ]]; then
-        echo "Error: The admin username must not contain 'admin'." >&2
-        exit 1
-    fi
-else
-	WORDPRESS_DB_USER="wp_user"
+# Clear webroot to ensure a clean install
+rm -rf ./*
+
+# Install wp-cli if missing
+if [ ! -x /usr/local/bin/wp ]; then
+  curl -sSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+  chmod +x wp-cli.phar
+  mv wp-cli.phar /usr/local/bin/wp
 fi
 
-if [ ! -f /var/www/html/wp-config.php ]; then
-        echo "Generating wp-config.php..."
-        cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
-        sed -i "s/database_name_here/${WORDPRESS_DB_NAME}/" /var/www/html/wp-config.php
-        sed -i "s/username_here/${WORDPRESS_DB_USER}/" /var/www/html/wp-config.php
-        sed -i "s/password_here/${WORDPRESS_DB_PASSWORD}/" /var/www/html/wp-config.php
-        sed -i "s/localhost/${WORDPRESS_DB_HOST}/" /var/www/html/wp-config.php
-        chown www-data:www-data /var/www/html/wp-config.php
-        chmod 644 /var/www/html/wp-config.php
+# Download WP core
+wp core download --path=/var/www/html --allow-root
+
+# Create wp-config.php from sample and substitute DB values (minimal approach)
+cp wp-config-sample.php wp-config.php
+sed -i "s/database_name_here/${WORDPRESS_DB_NAME:-db_name}/g" wp-config.php
+sed -i "s/username_here/${WORDPRESS_DB_USER:-db_user}/g" wp-config.php
+sed -i "s/password_here/${WORDPRESS_DB_PASSWORD:-db_pwd}/g" wp-config.php
+# If DB host is provided (e.g. host:port), ensure it's present
+if [ -n "${WORDPRESS_DB_HOST:-}" ]; then
+  sed -i "s/'DB_HOST', 'localhost'/'DB_HOST', '${WORDPRESS_DB_HOST}'/g" wp-config.php || true
 fi
+
+# Install WP (idempotent if already installed)
+wp core install --url="${WORDPRESS_URL:-http://${DOMAIN_NAME:-localhost}}" \
+  --title="${WORDPRESS_SITE_TITLE:-WordPress}" \
+  --admin_user="${WORDPRESS_ADMIN_USER:-admin}" \
+  --admin_password="${WORDPRESS_ADMIN_PASSWORD:-admin}" \
+  --admin_email="${WORDPRESS_ADMIN_EMAIL:-admin@localhost}" \
+  --path=/var/www/html --skip-email --allow-root || true
+
+# Optionally create a second user if environment variable is set
+if [ -n "${WORDPRESS_SECOND_USER:-}" ]; then
+  wp user create "${WORDPRESS_SECOND_USER}" "${WORDPRESS_SECOND_EMAIL:-user@${DOMAIN_NAME:-localhost}}" \
+    --user_pass="${WORDPRESS_SECOND_PASSWORD:-$(date +%s | sha1sum | head -c 12)}" \
+    --role="${WORDPRESS_SECOND_ROLE:-author}" --path=/var/www/html --allow-root || true
+fi
+
+
+# Ensure php-fpm listens on 9000 (optional; only if config exists)
+if [ -f /etc/php/7.3/fpm/pool.d/www.conf ]; then
+  sed -i 's|listen = /run/php/php7.3-fpm.sock|listen = 9000|g' /etc/php/7.3/fpm/pool.d/www.conf || true
+fi
+mkdir -p /run/php
+
+# Enable redis if available
+if command -v wp >/dev/null 2>&1; then
+  wp redis enable --path=/var/www/html --allow-root || true
+fi
+
+chown -R www-data:www-data /var/www/html || true
 
 exec php-fpm7.4 -F

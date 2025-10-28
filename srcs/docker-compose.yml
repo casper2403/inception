@@ -3,12 +3,15 @@ services:
     build: ./requirements/nginx
     container_name: nginx
     ports:
-      - "80:80"
+      - "80:80" 
       - "443:443"
     volumes:
       - wordpress_data:/var/www/html
+    networks:
+      - inception
     depends_on:
       - wordpress
+    image: nginx
     restart: always
 
   mariadb:
@@ -16,11 +19,11 @@ services:
     container_name: mariadb
     env_file:
       - .env
-    secrets:
-      - db_root_password
-      - db_password
     volumes:
       - mariadb_data:/var/lib/mysql
+    networks:
+      - inception
+    image: mariadb
     restart: always
   wordpress:
     build: ./requirements/wordpress
@@ -29,11 +32,11 @@ services:
       - mariadb
     env_file:
       - .env
-    secrets:
-      - db_password
-      - credentials
     volumes:
       - wordpress_data:/var/www/html
+    networks:
+      - inception
+    image: wordpress
     restart: always
 
 volumes:
@@ -50,10 +53,6 @@ volumes:
       o: bind
       device: /home/casper/data/wordpress_data
 
-secrets:
-  db_root_password:
-    file: ../secrets/db_root_password.txt
-  db_password:
-    file: ../secrets/db_password.txt
-  credentials:
-    file: ../secrets/credentials.txt
+networks:
+  inception:
+    name: inception
