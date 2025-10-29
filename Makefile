@@ -11,3 +11,10 @@ clean:
 re: down clean all
 
 .PHONY: all down clean re
+
+# docker exec -it mariadb mysql -u root -p
+# when prompted enter: wp_pass
+# SHOW DATABASES;
+# USE wordpress;
+# SHOW TABLES;
+# SELECT * FROM wp_posts;
