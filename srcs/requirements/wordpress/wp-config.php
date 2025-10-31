@@ -1,5 +1,4 @@
 <?php
-// ** MySQL settings - You can get this info from your .env file ** //
 define('DB_NAME', getenv('WORDPRESS_DB_NAME'));
 define('DB_USER', getenv('WORDPRESS_DB_USER'));
 define('DB_PASSWORD', getenv('WORDPRESS_DB_PASSWORD'));
@@ -7,8 +6,6 @@ define('DB_HOST', getenv('WORDPRESS_DB_HOST'));
 define('DB_CHARSET', 'utf8');
 define('DB_COLLATE', '');
 
-// ** Authentication Unique Keys and Salts. ** //
-// You can generate these at https://api.wordpress.org/secret-key/1.1/salt/
 define('AUTH_KEY',         '%bhpBpDb`S]x8uO2@rq[co*&*@2%TL&]ZYJLq!P?fk3kgW-alP#+[}sZz=uZ#g=z');
 define('SECURE_AUTH_KEY',  'HGi6]G.K6NK`b]B^mU)kA&=!g?#$W:{b=_2/CKQRi)}V-SRDs,bvX#;a +2eam+w');
 define('LOGGED_IN_KEY',    'mhM118t+SF$zh2?McfNSSB_VfsJPQ<z|K?n.U }3))|Ce*^}%vH&&m[9IO-<wU.0');
